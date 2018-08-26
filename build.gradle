@@ -1,0 +1,114 @@
+import org.codehaus.groovy.runtime.DateGroovyMethods
+
+buildscript {
+    repositories {
+     	mavenLocal()
+        mavenCentral()
+        jcenter()
+        maven {
+	        url 'http://repo.jenkins-ci.org/releases/'
+	    }
+    }
+}
+
+allprojects {
+	apply plugin: 'java'
+	apply plugin: 'maven'
+    apply plugin: 'groovy'
+    apply plugin: 'jacoco'
+
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        jcenter()
+    }
+
+    sourceSets {
+        main {
+            output.resourcesDir = 'build/classes/main'
+            output.classesDir = 'build/classes/main'
+            groovy {
+                srcDir 'src/com/pipeline'
+            }
+            resources {
+                srcDir 'resources'
+            }
+        }
+        test {
+            output.resourcesDir = 'build/classes/test'
+            output.classesDir = 'build/classes/test'
+            groovy {
+                srcDir 'test/com/pipeline'
+                srcDir 'test'
+            }
+            resources {
+                srcDir 'resources'
+            }
+        }
+    }
+
+    dependencies {
+        compile     group: 'org.codehaus.groovy',   name: 'groovy-all',             version: '2.4.6'
+        compile     group: 'com.cloudbees',         name: 'groovy-cps',             version: '1.12'
+        compile     group: 'commons-io',            name: 'commons-io',             version: '2.5'
+        compile     group: 'org.apache.ivy',        name: 'ivy',                    version: '2.4.0'
+        compile     group: 'org.assertj',           name: 'assertj-core',           version: '3.4.1'
+        compile     group: 'org.eclipse.hudson', name: 'hudson-core', version: '3.2.0'
+        compile     'org.codehaus.groovy:groovy-all:2.4.5'
+        testCompile 'junit:junit:4.12'
+        testCompile group: 'org.assertj',           name: 'assertj-core',           version: '3.4.1'
+        testCompile group: 'com.lesfurets',         name:'jenkins-pipeline-unit',   version:'1.1'
+    }
+
+    // Get external properties from file
+    if (project.hasProperty('extProps')) {
+        def props = new Properties()
+        file("$extProps").withInputStream { props.load(it) }
+        props.stringPropertyNames().forEach {
+            ext."$it" = props.getProperty(it)
+        }
+    }
+
+    defaultTasks 'test'
+
+    task javadocJar(type: Jar) {
+        classifier = 'javadoc'
+        from groovydoc
+    }
+
+    task sourcesJar(type: Jar) {
+        classifier = 'sources'
+        from sourceSets.main.allSource
+    }
+
+    test {
+        testLogging {
+            events "PASSED", "FAILED", "SKIPPED"
+        }
+    }
+
+    jacocoTestReport {
+        reports {
+            xml.enabled = true
+            html.enabled = true
+        }
+    }
+
+    task wrapper(type: Wrapper) {
+    	gradleVersion = '4.8.1'
+	}
+
+    task debugme {
+        doLast {
+            sourceSets.each {
+                println "sourceSet.name = "+it.name
+                println "groovy.srcDir = "+it.groovy.srcDirs
+                println "output.classesDir = "+it.output.classesDir
+                println "output.resourcesDir = "+it.output.resourcesDir
+                println "compileClasspath = "+it.compileClasspath.asPath
+                println "runtimeClasspath = "+it.runtimeClasspath.asPath
+                println ""
+            }
+        }
+    }
+}
